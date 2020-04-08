@@ -105,8 +105,8 @@ def find_appropriate_contours(img):
 
 
 def line_point_dist(line, point):
-    return min(np.linalg.norm([line[0][0] - point[0], line[0][1] - point[1]]),
-               np.linalg.norm([line[1][0] - point[0], line[1][1] - point[1]]))
+    return [np.linalg.norm([line[0][0] - point[0], line[0][1] - point[1]]),
+               np.linalg.norm([line[1][0] - point[0], line[1][1] - point[1]])]
 
 
 def append_intersection(graph, inter_point, line1, ind1, line2, ind2):
@@ -135,13 +135,16 @@ def find_lines_intersection(lines):
 def find_shape_points(img_shape, contour):
     res = np.zeros(img_shape, np.uint8)
     cv2.drawContours(res, [contour], 0, 255, 1)
-    lines = cv2.HoughLinesP(res, 0.5, np.pi / 360, 20, minLineLength=5, maxLineGap=5)
+    lines = cv2.HoughLinesP(res, 0.5, np.pi / 360, 10, minLineLength=5, maxLineGap=2)
+
+    if len(lines) < 3:
+        return []
 
     # show result
     # hough_res = res.copy()
     # for i, l_1 in enumerate(lines):
     #     x1, y1, x2, y2 = l_1[0]
-    #     cv2.line(hough_res, (x1, y1), (x2, y2), 150, 2)
+    #     cv2.line(hough_res, (x1, y1), (x2, y2), 150, 1)
     # cv2.imshow("hough_res", hough_res)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
@@ -151,11 +154,14 @@ def find_shape_points(img_shape, contour):
     # remove inappropriate intersections
     for i, line_inter in enumerate(intersection_graph):
         if len(line_inter) > 2:
-            sorted_points = list(np.array(sorted(line_inter, key=lambda x: x[2]))[:2])
-            intersection_graph[i] = sorted_points
+            sorted_p1 = list(np.array(sorted(line_inter, key=lambda x: x[2][0])))
+            sorted_p2 = list(np.array(sorted(line_inter, key=lambda x: x[2][1])))
+            intersection_graph[i] = [sorted_p1[0], sorted_p2[0]]
 
     shape_points = []
     shape_points = find_closed_contour(shape_points, intersection_graph, 0)
+    if len(shape_points) < 3:
+        return []
 
     # show result
     # tmp = np.zeros(img_shape, np.uint8)
@@ -261,6 +267,8 @@ if __name__ == '__main__':
 
     for c in cnt:
         shape_cnt = find_shape_points(img_src.shape, c)
+        if len(shape_cnt) == 0:
+            continue
 
         img_cnt = np.zeros_like(img_src)
         cv2.drawContours(img_cnt, [np.array(shape_cnt).astype(int)], 0, 255, -1)
