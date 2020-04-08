@@ -28,7 +28,7 @@ def full_intersection(l1, l2):
         return None
 
 
-def find_closed_contour(res, arr, num):
+def find_closed_contour(res, arr, num, lines_length):
     max_dist = 0
     ind = -1
     for i, el in enumerate(arr[num]):
@@ -36,18 +36,18 @@ def find_closed_contour(res, arr, num):
         if new_point not in res:
             if len(res) == 0:
                 res.append(el[1])
-                find_closed_contour(res, arr, el[0])
+                find_closed_contour(res, arr, el[0], lines_length)
                 return res
             last_added = res[len(res) - 1]
             dist = np.linalg.norm([new_point[0] - last_added[0], new_point[1] - last_added[1]])
             if dist > max_dist:
                 max_dist = dist
                 ind = i
-    if ind == -1:
+    if ind == -1 or max_dist < (lines_length[num] / 2):
         return res
     el = arr[num][ind]
     res.append(el[1])
-    find_closed_contour(res, arr, el[0])
+    find_closed_contour(res, arr, el[0], lines_length)
     return res
 
 
@@ -140,11 +140,19 @@ def find_shape_points(img_shape, contour):
     if len(lines) < 3:
         return []
 
+    lines_length = []
+    for l_1 in lines:
+        x1, y1, x2, y2 = l_1[0]
+        lines_length.append(np.linalg.norm([x2 - x1, y2 - y1]))
+
     # show result
-    # hough_res = res.copy()
-    # for i, l_1 in enumerate(lines):
+    # hough_res = np.zeros(img_shape, np.uint8)
+    # for l_1 in lines:
     #     x1, y1, x2, y2 = l_1[0]
     #     cv2.line(hough_res, (x1, y1), (x2, y2), 150, 1)
+    #     cv2.imshow("hough_res", hough_res)
+    #     cv2.waitKey(0)
+    #     cv2.destroyAllWindows()
     # cv2.imshow("hough_res", hough_res)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
@@ -159,7 +167,7 @@ def find_shape_points(img_shape, contour):
             intersection_graph[i] = [sorted_p1[0], sorted_p2[0]]
 
     shape_points = []
-    shape_points = find_closed_contour(shape_points, intersection_graph, 0)
+    shape_points = find_closed_contour(shape_points, intersection_graph, 0, lines_length)
     if len(shape_points) < 3:
         return []
 
